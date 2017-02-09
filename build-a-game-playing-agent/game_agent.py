@@ -130,18 +130,49 @@ class CustomPlayer:
         # Perform any required initializations, including selecting an initial
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
+        best_move = (-1, -1)
+        if len(game.get_legal_moves()) == 0:
+            return best_move
+        if game.move_count == 0:
+            return (int(game.width/2), int(game.height/2))
+
+        
+       
 
         try:
+
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            return self.minimax(game, 2)[1]
-            pass
+            # if use iterative deepening, use the method specified
+            if self.iterative:
+                if self.method == "minimax":
+                    depth = 1
+                    while True:
+                        best_move = self.minimax(game, depth, True)[1];
+                        if best_move == (-1, -1):
+                            return best_move
+                        depth += 1
+                if self.method == "alphabeta":
+                    depth = 1
+                    while True:
+                        best_move = self.alphabeta(game, depth)[1]
+                        if best_move == (-1, -1):
+                            return best_move
+                        depth += 1
+                
+                
+            else:
+                if self.method == "minimax":
+                    best_move = self.minimax(game, self.search_depth, True)[1]
+                if self.method == "alphabeta":
+                    best_move = self.minimax(game, self.search_depth, True)[1]
+                return best_move
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            pass
+            return best_move
 
         # Return the best move from the last completed search iteration
         raise NotImplementedError
@@ -171,10 +202,6 @@ class CustomPlayer:
         tuple(int, int)
             The best move for the current branch; (-1, -1) for no legal moves
         """
-        # print stuff for understanding things
-        # print("\ndepth " + str(depth))
-        # print(game.print_board())
-        # print(game.get_player_location(game.active_player))
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
         
@@ -184,13 +211,16 @@ class CustomPlayer:
         # return the max or min
         queue = game.get_legal_moves()
         scores = []
-        if len(queue) == 1:
-            return float("-inf"), (-1, -1) 
+        if len(queue) == 0:
+            if maximizing_player:
+                return float("-inf"), (-1, -1) 
+            else:
+                return float("inf"), (-1, -1)
+
         if depth == 1:
             for possible_move in queue:
-                new_game = game.copy()
-                new_game.apply_move(possible_move)
-                scores.append(self.score(game, game.active_player))
+                new_game = game.forecast_move(possible_move)
+                scores.append(self.score(new_game, new_game.active_player))
 
 
         # make a queue to store the possible moves
@@ -200,8 +230,7 @@ class CustomPlayer:
         else:
             game_queue = []
             for i in range(len(queue)):
-                new_game = game.copy()
-                new_game.apply_move(queue[i])
+                new_game = game.forecast_move(queue[i])
                 move_result = self.minimax(new_game, int(depth) - int(1), not maximizing_player)
                 game_queue.append(move_result[1])
                 scores.append(move_result[0])
@@ -261,49 +290,55 @@ class CustomPlayer:
         queue = game.get_legal_moves()
         scores = []
 
-        # base case: if only search one layer
-        if depth == 1:
-            # if maximizing_player is True
+        if len(queue) == 0:
             if maximizing_player:
-                for possible_move in queue:
-                    new_game = game.copy()
-                    game.apply_move(possible_move)
-                    score = self.score(game, game.active_player)
-                    if float(score) >= beta:
-                        return float(score), possible_move
-                    scores.append(score)
-                max = 0
-                for i in range(len(scores)):
-                    if scores[i] > scores[max]:
-                        max = i
-                return float(scores[max]), queue[max]
-            #if maximizing_player is False
+                return float("-inf"), (-1, -1) 
             else:
-                for possible_move in queue:
-                    new_game = game.copy()
-                    new_game.apply(possible_move)
-                    score = self.score(game, game.active_player)
-                    if float(score) < alpha:
-                        return float(score), possible_move
-                    scores.append(score)
-                min = 0
-                for i in range(len(scores)):
-                    if scores[i] < scores[min]:
-                        min = i
-                return float(scores[min]), queue[min]
-            
-        # if search more than one layer
-        else: 
+                return float("inf"), (-1, -1)
+
+        # base case: depth is 0
+        if depth == 0:
+            return self.score(game, game.active_player), game.__last_player_move__
+
+        # base case: if only search one layer
+        else:
             # if maximizing_player is True
             if maximizing_player:
                 new_beta = beta
                 for possible_move in queue:
-                    new_game = game.copy()
-                    new_game.apply_move(possible_move)
-                    score = self.alphabeta(new_game, alpha, new_beta, False)
+                    new_game = game.forecast_move(possible_move)
+                    score = self.alphabeta(new_game, int(depth) - 1, alpha, new_beta, False)
+                    if score[0] > float(alpha):
+                        return score[0], possible_move
                     
-        
+                    if score[0] > new_beta:
+                        new_beta = score[0]
+                    
+                    scores.append(score[0])
+                        
+                max = 0
+                for i in range(len(scores)):
+                    if scores[i] > scores[max]:
+                        max = i
+                return scores[max], queue[max]
 
+            #if maximizing_player is False
+            else:
+                new_alpha = alpha
+                for possible_move in queue:
+                    new_game = game.forecast_move(possible_move)
+                    score = self.alphabeta(new_game, depth-1, new_alpha, beta, True)
+                    if score[0] < new_alpha:
+                        new_alpha = score[0]
+                    if score[0] < beta:
+                        return score[0], possible_move
+                    scores.append(score[0])
+
+                min = 0
+                for i in range(len(scores)):
+                    if scores[i] < scores[min]:
+                        min = i
+                return scores[min], queue[min]
 
 
         if self.time_left() < self.TIMER_THRESHOLD:
