@@ -41,7 +41,7 @@ def custom_score(game, player):
 
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves)
+    return float(own_moves)
 
 
     # TODO: finish this function!
@@ -209,8 +209,11 @@ class CustomPlayer:
         # get current_player's current position
         # calculate one level down according to score function
         # return the max or min
+        # if depth == 0:
+        #     return self.score(game, game.active_player()), game.get_player_location(game.inactive_player())
         queue = game.get_legal_moves()
         scores = []
+        game_queue = []
         if len(queue) == 0:
             if maximizing_player:
                 return float("-inf"), (-1, -1) 
@@ -220,22 +223,19 @@ class CustomPlayer:
         if depth == 1:
             for possible_move in queue:
                 new_game = game.forecast_move(possible_move)
-                scores.append(self.score(new_game, new_game.active_player))
-
+                scores.append(self.score(new_game,self))
 
         # make a queue to store the possible moves
         # for each move in the queue, make a deep copy of the game, then move the move,
         # then recurse and depending on whether or not maximizing_player is True
         # choose a possible move
-        else:
-            game_queue = []
-            for i in range(len(queue)):
-                new_game = game.forecast_move(queue[i])
-                move_result = self.minimax(new_game, int(depth) - int(1), not maximizing_player)
-                game_queue.append(move_result[1])
-                scores.append(move_result[0])
-            
-        
+        if depth > 1:
+            for possible_move in queue:
+                new_game = game.forecast_move(possible_move)
+                new_score = self.minimax(new_game, int(depth) - 1, not maximizing_player)
+                game_queue.append(new_score[1])
+                scores.append(new_score[0])
+           
         
         if maximizing_player:
             max = 0
@@ -286,6 +286,10 @@ class CustomPlayer:
         tuple(int, int)
             The best move for the current branch; (-1, -1) for no legal moves
         """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise Timeout()
+
+
         # get a queue of the possible moves
         queue = game.get_legal_moves()
         scores = []
@@ -298,7 +302,7 @@ class CustomPlayer:
 
         # base case: depth is 0
         if depth == 0:
-            return self.score(game, game.active_player), game.__last_player_move__
+            return self.score(game, self), game.get_player_location(game.inactive_player)
 
         # base case: if only search one layer
         else:
