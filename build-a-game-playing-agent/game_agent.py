@@ -8,7 +8,6 @@ relative strength using tournament.py and include the results in your report.
 """
 import random
 
-
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
     pass
@@ -33,15 +32,57 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    
     if game.is_loser(player):
         return float("-inf")
 
     if game.is_winner(player):
         return float("inf")
+    
+    player_moves = game.get_legal_moves(player)
+    opponent_moves = game.get_legal_moves(game.get_opponent(player))
 
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves)
+    own_moves_value = len(player_moves)
+    opp_moves_value = len(opponent_moves)
+
+    total_spaces = game.width * game.height
+    num_blank = total_spaces - game.move_count
+
+    player_pos = game.get_player_location(player)
+    opponent_pos = game.get_player_location(game.get_opponent(player))
+
+    num_repeats = 0
+
+    for move in player_moves:
+        if move in opponent_moves:
+            num_repeats += 1
+
+
+    
+    if own_moves_value == num_repeats:
+        own_moves_value -= 1.2 * num_repeats
+    
+    elif own_moves_value - num_repeats*1.5 < 0 and num_blank < total_spaces / 3:
+        own_moves_value -= 1.2 * num_repeats
+    
+    elif own_moves_value - num_repeats * 1.5 < 0:
+        own_moves_value -= 0.8 * num_repeats
+
+    elif num_blank < total_spaces * 0.3:
+        own_moves_value -= 0.4 * num_repeats
+    else:
+        own_moves_value -= 0.4
+    
+    
+    player_distance = (player_pos[0] - opponent_pos[0])**2 + (player_pos[1] - opponent_pos[1])**2
+    if player_distance < total_spaces / 4:
+        own_moves_value -= 0.4
+    elif player_distance < total_spaces / 2:
+        own_moves_value -= 0.2
+    
+
+    
+    return float(own_moves_value - opp_moves_value)
 
 
     # TODO: finish this function!
@@ -85,7 +126,7 @@ class CustomPlayer:
         self.score = score_fn
         self.method = method
         self.time_left = None
-        self.TIMER_THRESHOLD = timeout
+        self.TIMER_THRESHOLD = timeout - 2
 
     def get_move(self, game, legal_moves, time_left):
         """Search for the best move from the available legal moves and return a
