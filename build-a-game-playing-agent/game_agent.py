@@ -250,7 +250,7 @@ class CustomPlayer:
                 if scores[i] < scores[min]:
                     min = i
             return scores[min], queue[min]
-
+        
         
 
 
@@ -302,40 +302,40 @@ class CustomPlayer:
 
         # base case: depth is 0
         if depth == 0:
-            return self.score(game, self), game.get_player_location(game.inactive_player)
+            return self.score(game, self), 
 
-        # base case: if only search one layer
+        # base case: if search more layers
         else:
             # if maximizing_player is True
             if maximizing_player:
-                new_beta = beta
+                new_alpha = alpha
                 for possible_move in queue:
                     new_game = game.forecast_move(possible_move)
-                    score = self.alphabeta(new_game, int(depth) - 1, alpha, new_beta, False)
-                    if score[0] > float(alpha):
+                    score = self.alphabeta(new_game, int(depth) - 1, new_alpha, beta, not maximizing_player)
+                    if score[0] >= float(beta):
                         return score[0], possible_move
                     
-                    if score[0] > new_beta:
-                        new_beta = score[0]
+                    if score[0] > new_alpha:
+                        new_alpha = score[0]
                     
                     scores.append(score[0])
                         
                 max = 0
                 for i in range(len(scores)):
-                    if scores[i] > scores[max]:
+                    if scores[i] >= scores[max]:
                         max = i
                 return scores[max], queue[max]
 
             #if maximizing_player is False
             else:
-                new_alpha = alpha
+                new_beta = beta
                 for possible_move in queue:
                     new_game = game.forecast_move(possible_move)
-                    score = self.alphabeta(new_game, depth-1, new_alpha, beta, True)
-                    if score[0] < new_alpha:
-                        new_alpha = score[0]
-                    if score[0] < beta:
+                    score = self.alphabeta(new_game, int(depth) - 1, alpha, new_beta, not maximizing_player)
+                    if score[0] <= alpha:
                         return score[0], possible_move
+                    if score[0] < new_beta:
+                        new_beta = score[0]
                     scores.append(score[0])
 
                 min = 0
@@ -345,8 +345,8 @@ class CustomPlayer:
                 return scores[min], queue[min]
 
 
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise Timeout()
+        
+
 
         # TODO: finish this function!
         raise NotImplementedError
