@@ -7,6 +7,7 @@ You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
 import random
+import math
 
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
@@ -33,60 +34,43 @@ def custom_score(game, player):
         The heuristic value of the current game state to the specified player.
     """
     
+    # if the player wins or loses, return negative or positive infinity
     if game.is_loser(player):
         return float("-inf")
 
     if game.is_winner(player):
         return float("inf")
-    
+
+    # get the player's moves and opponent's moves
     player_moves = game.get_legal_moves(player)
     opponent_moves = game.get_legal_moves(game.get_opponent(player))
 
-    own_moves_value = len(player_moves)
-    opp_moves_value = len(opponent_moves)
+    move_value = float(len(player_moves) - len(opponent_moves))
 
-    total_spaces = game.width * game.height
-    num_blank = total_spaces - game.move_count
+    # check for overlap between the players' possible moves
+    for move in player_moves:
+        if move in opponent_moves:
+            move_value -= 1.5
 
+    # check if players are close together.
+    # Penalize if players are close but game board is less filled
+    # Award if players are far but game board is more filled
     player_pos = game.get_player_location(player)
     opponent_pos = game.get_player_location(game.get_opponent(player))
 
-    num_repeats = 0
+    num_blank = len(game.get_blank_spaces())
+    total_spaces = game.width * game.height
 
-    for move in player_moves:
-        if move in opponent_moves:
-            num_repeats += 1
+    player_distance = math.sqrt((player_pos[0] - opponent_pos[0])**2 + \
+        (player_pos[1] - opponent_pos[1])**2)
+    if player_distance < game.width / 3 and (num_blank > total_spaces / 3):
+        move_value -= 0.8
 
+    elif player_distance > game.width / 3 and (num_blank < total_spaces / 3):
+        move_value += 0.8
 
-    
-    if own_moves_value == num_repeats:
-        own_moves_value -= 1.2 * num_repeats
-    
-    elif own_moves_value - num_repeats*1.5 < 0 and num_blank < total_spaces / 3:
-        own_moves_value -= 1.2 * num_repeats
-    
-    elif own_moves_value - num_repeats * 1.5 < 0:
-        own_moves_value -= 0.8 * num_repeats
+    return move_value
 
-    elif num_blank < total_spaces * 0.3:
-        own_moves_value -= 0.4 * num_repeats
-    else:
-        own_moves_value -= 0.4
-    
-    
-    player_distance = (player_pos[0] - opponent_pos[0])**2 + (player_pos[1] - opponent_pos[1])**2
-    if player_distance < total_spaces / 4:
-        own_moves_value -= 0.4
-    elif player_distance < total_spaces / 2:
-        own_moves_value -= 0.2
-    
-
-    
-    return float(own_moves_value - opp_moves_value)
-
-
-    # TODO: finish this function!
-    raise NotImplementedError
 
 
 class CustomPlayer:

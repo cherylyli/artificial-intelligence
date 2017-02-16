@@ -155,6 +155,9 @@ def main():
                        "AB_" + name) for name, h in HEURISTICS]
     random_agents = [Agent(RandomPlayer(), "Random")]
 
+    # improved_agents = [Agent(CustomPlayer(score_fn=h, **CUSTOM_ARGS),
+    #                    "IP_" + name) for name, h in HEURISTICS]
+
     # ID_Improved agent is used for comparison to the performance of the
     # submitted agent for calibration on the performance across different
     # systems; i.e., the performance of the student agent is considered
@@ -162,6 +165,8 @@ def main():
     # faster or slower computers.
     test_agents = [Agent(CustomPlayer(score_fn=improved_score, **CUSTOM_ARGS), "ID_Improved"),
                    Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "Student")]
+    
+    # test_agents = [Agent(CustomPlayer(score_fn=custom_score, **CUSTOM_ARGS), "Student")]
 
     print(DESCRIPTION)
     for agentUT in test_agents:
@@ -171,6 +176,7 @@ def main():
         print("*************************")
 
         agents = random_agents + mm_agents + ab_agents + [agentUT]
+        # agents = improved_agents + [agentUT]
         win_ratio = play_round(agents, NUM_MATCHES)
 
         print("\n\nResults:")
